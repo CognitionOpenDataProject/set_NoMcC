@@ -1,0 +1,99 @@
+---
+title: "COD Reproducibility Report"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+#### Article ID: NoMcC
+#### Pilot: Alicia Hofelich Mohr
+#### Co-pilot: Tom Hardwicke  
+#### Start date: 03-31-2017
+#### End date: [Insert end date - use US format]   
+
+-------
+
+#### Methods summary: 
+Researchers investigated the extent to which participants automatically imitate a heterosexual romantic partner versus a close friend of the same gender, and whether this imitation varies with levels of attachment anxiety or avoidance in each relationship (as assessed by an attachement questionnaire). Partners and friends were recorded performing mouth-opening movements, which were then presented to the participants as they were also instructed to either perform congruent or incongruent mouth-opening actions. Latency to perform the movement was measured using electromyographic (EMG) recordings of the Obicularis Oris. 
+
+The extent to which latency was affected by congruency of stimulus, type of partner (platonic versus romantic) and attachement style was tested. 
+
+It appears that two participants were removed for having attachment scores over two SD of the group mean (IDs 5 and 7). These ids are missing from the dataset, so there is no way to confirm this statement. The raw EMG data is also missing and latency appears to be captured in the variable "LENGTH", although the lack of metadata included with the labels makes this difficult to confirm. 
+
+------
+
+#### Target outcomes: 
+
+> First, scores reflecting attachment-related anxiety (ANX) and avoidance (AVO) were extracted for both the romantic and the platonic relationship, for each participant (following Fraley et al., 2000). Two participants were excluded for having scores >±2SD from the group mean, leaving 19 participants for final analysis. Mean ANX scores did not significantly differ between relationship types, M(romantic) = 1.75, 95% CI[1.14, 2.36], M(platonic) = 1.95 95% CI[1.41, 2.48], t(18) = 0.64, p > 0.250. However there was a significant difference in AVO scores, M(romantic) = 1.20, 95% CI[0.75, 1.65], M(platonic) = 3.11, 95% CI[2.33, 3.90], t(18) = 5.28, p < 0.001, d = 1.44. There were no gender differences in any of the attachment scores (all p-values > 0.11).
+
+> To obtain a broad understanding of automatic imitation of partners and friends before attachment was considered, we first carried out a basic repeated-measures ANOVA with two within-subjects factors, Congruency (congruent vs. incongruent) and Relationship (platonic vs. romantic). This revealed an expected large main effect of Congruency, F(1, 18) = 91.8, p < 0.001, whereby participants were significantly faster to respond to congruent trials, M = 390 ms, 95% CI[333, 447], than incongruent trials, M = 465 ms, 95% CI[402, 529]. Importantly, this effect was significantly moderated by Relationship, F(1, 18) = 14.96, p = 0.001. Paired t-tests revealed that participants were faster to respond to their partner than their friend on congruent trials, MPARTNER = 378 ms, MFRIEND = 400 ms, t(18) = 2.70, p = 0.015, and slower to respond to their partner compared to their friend on incongruent trials, MPARTNER = 476 ms, MFRIEND = 454 ms, t(18) = 1.89, p = 0.075. The absolute difference in RT between trials featuring the partner and the friend did not significantly differ for congruent vs. incongruent conditions, MCONG = 34.3 ms, MINCONG = 38.1 ms, t(18) = 0.36, p = 0.725. This suggested that the effects of Relationship were observed relatively equally in both congruent and incongruent trials.
+
+> Next, adult attachment scores were added to the analyses to investigate how these were related to automatic imitation. As each participant had four separate scores indicating their attachment to their partner and to their friend, a linear mixed effects model was deemed a suitable alternative to standard repeated-measures ANCOVA as it allows for covariates that differ for different levels of the repeated factor. The dependent variable was the congruency effect (CE), calculated by subtracting the mean RT for incongruent trials from those for congruent trials, for ‘partner’ and ‘friend’ separately. Using GENLINMIXED in SPSS 21, a fully-factorial model was fitted with one within-subjects categorical predictor, Relationship (platonic vs. romantic), and two standardised continuous between-subjects predictors, ANX and AVO. A random factor, representing the intercept for each participant, was also entered, to take into account the within-subjects nature of the data.
+
+> This model was a significant fit for the data, F(7, 30) = 19.25, p < 0.001. Inspection of the model parameters revealed a main effect of Relationship, F(1, 30) = 4.40, p = 0.044, whereby individuals showed significantly greater mimicry of their partners than they did their friends, controlling for differences in ANX and AVO attachment style (see Fig. 2).
+
+> This effect was significantly moderated by ANX, F(1, 30) = 9.25, p = 0.005, whereby ANX had a significantly different effect on mimicry of partners compared to friends. For the partner, the parameter estimate of the effect of ANX on mimicry was positive, M = 19 ms, 95% CI[−1, 40], p = 0.064, and for the friend was negative, M = −15 ms, 95% CI[−26, −4], p = 0.012. In contrast, there was no significant main effect of AVO attachment style, F(1, 30) = 0.57, p = 0.456, nor did it interact with Relationship, F(1, 30) = 0.51, p = 0.479. These findings are summarised in Fig. 3.
+
+
+------
+
+[The chunk below sets up some formatting options for the R Markdown document]
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+## Step 1: Load packages
+
+[Some useful packages are being loaded below. You can add any additional ones you might need too.]
+
+```{r}
+library(tidyverse) # for data munging
+library(knitr) # for kable table formating
+library(haven) # import and export 'SPSS', 'Stata' and 'SAS' Files
+library(readxl) # import excel files
+library(CODreports) # custom report functions
+```
+
+## Step 2: Load data
+
+```{r}
+```
+
+## Step 3: Tidy data
+
+```{r}
+```
+
+## Step 4: Run analysis
+
+### Pre-processing
+
+[you can remove this section if no pre-processing is required]
+
+```{r}
+```
+
+### Descriptive statistics
+
+```{r}
+```
+
+### Inferential statistics
+
+```{r}
+```
+
+## Step 5: Conclusion
+
+```{r}
+```
+
+[Please also include a brief text summary describing your findings. If this reproducibility check was a failure, you should note any suggestions as to what you think the likely cause(s) might be.]
+
+[This function will output information about the package versions used in this report:]
+
+```{r session_info, include=TRUE, echo=TRUE, results='markup'}
+devtools::session_info()
+```
