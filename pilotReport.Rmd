@@ -235,17 +235,22 @@ mle1 = lme(CE ~ relationship*ZANX*ZAVO, random= ~1|ID/relationship, data=dataset
 anova(basemodel, mle1)
 
 #Parameter estimates
-summary(mle1)
 anova(mle1, type="marginal") #use Type III SS for comparison to SPSS
+summary(mle1)
 
 ```
 
-The reported df are not the same as I see (30 reported versus 12 observed). It almost seems like the model didn't actually use ID as a random effect and just used a normal OLS regression. 
-```{r}
-m2 = lm(CE ~ relationship*ZANX*ZAVO, data=dataset3)
-summary(m2)
-anova(m2)
-```
+The authors used GENLINMIXED in SPSS, rather than the nlme mixed pagckage in R, so it is very likely that  differences seen here are due to the different ways each program calculates the model. 
+
+However, there are some inconsistencies: 
+* The reported denominator df are not the same as I see (30 reported versus 12 observed here). 
+* Overall model "fit" is not reported in the lme output, but an approximation is calcualted using a model based on means. The comparison between this "baseline" model and the full model is similar to the reported finding that the model fit well
+* relationship was right at significance, rather than highly significant 
+* interaction between relationship and ZANX was not signficiant 
+* Parameter estimates and t-values did not match up 
+
+In order to determine whether I get the same result in SPSS using the procedure described, I wrote out the same da
+
 
 ## Step 5: Conclusion
 
