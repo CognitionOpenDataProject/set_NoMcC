@@ -55,6 +55,7 @@ library(readxl) # import excel files
 library(devtools)
 install_github("CODreports", repo="CognitionOpenDataProject/CODreports")
 library(CODreports) # custom report functions
+library(nlme) #for mixed linear model, most similar output to SPSS
 ```
 
 ## Step 2: Load data
@@ -90,8 +91,8 @@ No idea what Baseline_M is.
 
 Dataset2 needs to be reshaped in order to run the tests described. 
 ```{r}
-#add ID variable
-dataset2$ID = 1:19
+#add ID variable (1-21, missing 5 and 7 - have to assume they are in the same order... )
+dataset2$ID = c(1:4, 6, 8:21)
 dataset2.long = gather(dataset2, key=type, value=mean_latency, M_CONG_P:M_INCONG_F)
 dataset2.long$congruency = gsub("M_|_P|_F", "", dataset2.long$type)
 dataset2.long$relationship = gsub("M_CONG_|M_INCONG_", "", dataset2.long$type)
@@ -136,18 +137,17 @@ t.test(AVO ~ VID_FACE, data=dataset1, paired=T)
 
 > There were no gender differences in any of the attachment scores (all p-values > 0.11).
 
-Unclear what test they used - probably a t-test?
+Unclear what test they used - probably a t-test? Separate t-tests for each test/relationship?
 ```{r}
-t.test(AVO ~ gender, data=dataset1, paired=FALSE)
-t.test(ANX ~ gender, data=dataset1, paired=FALSE)
+t.test(AVO ~ gender, data=subset(dataset1, dataset1$VID_FACE==1), paired=FALSE)
+t.test(AVO ~ gender, data=subset(dataset1, dataset1$VID_FACE==2), paired=FALSE)
+t.test(ANX ~ gender, data=subset(dataset1, dataset1$VID_FACE==1), paired=FALSE)
+t.test(ANX ~ gender, data=subset(dataset1, dataset1$VID_FACE==2), paired=FALSE)
 ```
 
-If using t-test, the lowest value reported doesn't match reported. 
-```{r}
-compareValues(reportedValue = 0.11, obtainedValue = 0.0931, isP=T)
-```
+Yes, the separate t-tests seem to match the results they report. 
 
-This discrepency is larger if repeated scores for each subject are taken into account
+Although if done in an ANOVA, the descrepency is much larger. 
 ```{r}
 summary(aov(AVO ~ gender + Error(factor(id1)), data=dataset1))
 summary(aov(ANX ~ gender + Error(factor(id1)), data=dataset1))
@@ -207,15 +207,45 @@ mean(dataset2$abspfdiff_incong)
 
 > Next, adult attachment scores were added to the analyses to investigate how these were related to automatic imitation. As each participant had four separate scores indicating their attachment to their partner and to their friend, a linear mixed effects model was deemed a suitable alternative to standard repeated-measures ANCOVA as it allows for covariates that differ for different levels of the repeated factor. The dependent variable was the congruency effect (CE), calculated by subtracting the mean RT for incongruent trials from those for congruent trials, for ‘partner’ and ‘friend’ separately. Using GENLINMIXED in SPSS 21, a fully-factorial model was fitted with one within-subjects categorical predictor, Relationship (platonic vs. romantic), and two standardised continuous between-subjects predictors, ANX and AVO. A random factor, representing the intercept for each participant, was also entered, to take into account the within-subjects nature of the data.
 
-First, calculate congruency effect. 
+First, calculate congruency effect (CE). 
 ```{r}
-#START HERE - SHOULD BE WORKING BUT IT IS NOT
-dataset2.long$congruency = as.factor(dataset2.long$congruency)
-spread(dataset2.long, congruency, mean_latency, convert=T, drop=T)
+#create a new dataset with "widened" cong/incong latency to create CE scores
+dataset2.long = subset(dataset2.long, select=c("ID", "relationship", "congruency", "mean_latency"))
+dataset3 = spread(dataset2.long, congruency, mean_latency, convert=T, drop=T)
 
+#create CE scores (incongruent - congruent latency)
+dataset3$CE = dataset3$INCONG - dataset3$CONG
+
+#merge AVO and ANX data into this dataset for analysis
+#create new variable with P and F values for VID_FACE (1= Partner, 2= Friend)
+dataset1$relationship = ifelse(dataset1$VID_FACE==1, "P", "F")
+
+#Merge in the AVO and ANX scores into the data
+dataset3 = merge(dataset3, subset(dataset1, select=c("id1", "relationship", "AVO", "ANX", "ZAVO", "ZANX")), by.x=c("ID", "relationship"), by.y=c("id1", "relationship"))
 
 ```
 
+> This model was a significant fit for the data, F(7, 30) = 19.25, p < 0.001. Inspection of the model parameters revealed a main effect of Relationship, F(1, 30) = 4.40, p = 0.044, whereby individuals showed significantly greater mimicry of their partners than they did their friends, controlling for differences in ANX and AVO attachment style (see Fig. 2).
+
+Then run linear mixed effects model. 
+```{r}
+#to get the overall fit p value:
+basemodel = lme(CE ~ 1, random = ~1|ID/relationship, data=dataset3, method="ML")
+mle1 = lme(CE ~ relationship*ZANX*ZAVO, random= ~1|ID/relationship, data=dataset3, method="ML")
+anova(basemodel, mle1)
+
+#Parameter estimates
+summary(mle1)
+anova(mle1, type="marginal") #use Type III SS for comparison to SPSS
+
+```
+
+The reported df are not the same as I see (30 reported versus 12 observed). It almost seems like the model didn't actually use ID as a random effect and just used a normal OLS regression. 
+```{r}
+m2 = lm(CE ~ relationship*ZANX*ZAVO, data=dataset3)
+summary(m2)
+anova(m2)
+```
 
 ## Step 5: Conclusion
 
