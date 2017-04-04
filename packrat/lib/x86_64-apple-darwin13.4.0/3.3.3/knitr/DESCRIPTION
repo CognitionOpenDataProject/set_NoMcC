@@ -116,7 +116,7 @@ Author: Yihui Xie [aut, cre], Adam Vogt [ctb], Alastair Andrew [ctb],
     [ctb], Zachary Foster [ctb]
 Repository: CRAN
 Date/Publication: 2016-11-22 09:36:46
-Built: R 3.3.3; ; 2017-03-31 19:05:14 UTC; unix
+Built: R 3.3.2; ; 2016-11-23 12:29:51 UTC; unix
 InstallAgent: packrat 0.4.7.1
 InstallSource: CRAN
 Hash: eed7437e2b614c9e3923b7932b16ac97

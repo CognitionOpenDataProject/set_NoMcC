@@ -38,7 +38,6 @@ It appears that two participants were removed for having attachment scores over 
 
 ------
 
-[The chunk below sets up some formatting options for the R Markdown document]
 
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
@@ -46,44 +45,177 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 
 ## Step 1: Load packages
 
-[Some useful packages are being loaded below. You can add any additional ones you might need too.]
+Unable to install CODreports. 
 
 ```{r}
 library(tidyverse) # for data munging
 library(knitr) # for kable table formating
 library(haven) # import and export 'SPSS', 'Stata' and 'SAS' Files
 library(readxl) # import excel files
+library(devtools)
+install_github("CODreports", repo="CognitionOpenDataProject/CODreports")
 library(CODreports) # custom report functions
 ```
 
 ## Step 2: Load data
 
 ```{r}
+dataset1 = read_excel(path="data/data.xlsx", sheet = 1)
+dataset2 = read_excel(path="data/data.xlsx", sheet = 2)
 ```
 
 ## Step 3: Tidy data
 
+While dataset1 seems "tidy" the lack of any usable metadata makes it very difficult to know which columns contain which pieces of data, and what the values within columns represent. 
 ```{r}
+head(dataset1)
+summary(dataset1)
 ```
+
+
+Id1 and couple_ID have a 1:1 relationship, so unclear what the difference between those to variables is. 
+```{r}
+table(dataset1$id1, dataset1$couple_ID)
+```
+
+
+Since each line with the same id1 value and different "VID_FACE" values have different attachment score values (AVO and ANX), this must be partner/friend rather than congruent/incongruent. Unclear which is 1 and which is 2.  
+```{r}
+by(dataset1$AVO, dataset1$VID_FACE, summary)
+by(dataset1$ANX, dataset1$VID_FACE, summary)
+```
+Based on the means and description from the results, romantic partner must be 1 and friend 2. 
+
+No idea what Baseline_M is. 
+
+Dataset2 needs to be reshaped in order to run the tests described. 
+```{r}
+#add ID variable
+dataset2$ID = 1:19
+dataset2.long = gather(dataset2, key=type, value=mean_latency, M_CONG_P:M_INCONG_F)
+dataset2.long$congruency = gsub("M_|_P|_F", "", dataset2.long$type)
+dataset2.long$relationship = gsub("M_CONG_|M_INCONG_", "", dataset2.long$type)
+```
+
 
 ## Step 4: Run analysis
 
-### Pre-processing
-
-[you can remove this section if no pre-processing is required]
-
-```{r}
-```
-
 ### Descriptive statistics
 
+> Two participants were excluded for having scores >±2SD from the group mean, leaving 19 participants for final analysis.
+
+It appears that participants with IDs 5 and 7 are not included in the data, so it is assumed those participants were removed. There are indeed 19 participants in the data. 
+
 ```{r}
+levels(factor(dataset1$id1))
+length(levels(factor(dataset1$id1)))
 ```
+ 
+> Mean ANX scores did not significantly differ between relationship types, M(romantic) = 1.75, 95% CI[1.14, 2.36], M(platonic) = 1.95 95% CI[1.41, 2.48], t(18) = 0.64, p > 0.250. 
+
+```{r}
+kable(dataset1 %>%
+  group_by(VID_FACE) %>%
+  summarize(mean_ANX = mean(ANX), sd_ANX=sd(ANX), hci = (mean(ANX) + 2.10*(sd(ANX)/sqrt(19))), lci = (mean(ANX) - 2.10*(sd(ANX)/sqrt(19)))), digits=2, col.names = c("Relationship", "Mean", "SD", "High 95 CI", "Low 95 CI"), caption="ANX tests")
+
+t.test(ANX ~ VID_FACE, data=dataset1, paired=T)
+```
+
+
+
+> However there was a significant difference in AVO scores, M(romantic) = 1.20, 95% CI[0.75, 1.65], M(platonic) = 3.11, 95% CI[2.33, 3.90], t(18) = 5.28, p < 0.001, d = 1.44. 
+
+```{r}
+kable(dataset1 %>%
+  group_by(VID_FACE) %>%
+  summarize(mean_AVO = mean(AVO), sd_AVO=sd(AVO), hci = (mean(AVO) + 2.10*(sd(AVO)/sqrt(19))), lci = (mean(AVO) - 2.10*(sd(AVO)/sqrt(19)))), digits=2, col.names = c("Relationship", "Mean", "SD", "High 95 CI", "Low 95 CI"), caption="AVO tests")
+
+t.test(AVO ~ VID_FACE, data=dataset1, paired=T)
+```
+
+
+> There were no gender differences in any of the attachment scores (all p-values > 0.11).
+
+Unclear what test they used - probably a t-test?
+```{r}
+t.test(AVO ~ gender, data=dataset1, paired=FALSE)
+t.test(ANX ~ gender, data=dataset1, paired=FALSE)
+```
+
+If using t-test, the lowest value reported doesn't match reported. 
+```{r}
+compareValues(reportedValue = 0.11, obtainedValue = 0.0931, isP=T)
+```
+
+This discrepency is larger if repeated scores for each subject are taken into account
+```{r}
+summary(aov(AVO ~ gender + Error(factor(id1)), data=dataset1))
+summary(aov(ANX ~ gender + Error(factor(id1)), data=dataset1))
+```
+
 
 ### Inferential statistics
 
+> To obtain a broad understanding of automatic imitation of partners and friends before attachment was considered, we first carried out a basic repeated-measures ANOVA with two within-subjects factors, Congruency (congruent vs. incongruent) and Relationship (platonic vs. romantic). This revealed an expected large main effect of Congruency, F(1, 18) = 91.8, p < 0.001, whereby participants were significantly faster to respond to congruent trials, M = 390 ms, 95% CI[333, 447], than incongruent trials, M = 465 ms, 95% CI[402, 529]. Importantly, this effect was significantly moderated by Relationship, F(1, 18) = 14.96, p = 0.001. 
+
 ```{r}
+summary(aov(mean_latency ~ congruency*relationship + Error(factor(ID)/(congruency*relationship)), data=dataset2.long))
+kable(dataset2.long %>%
+  group_by(congruency) %>%
+  summarize(mean = mean(mean_latency), sd=sd(mean_latency), hci = (mean(mean_latency) + 2.10*(sd(mean_latency)/sqrt(19))), lci = (mean(mean_latency) - 2.10*(sd(mean_latency)/sqrt(19)))),digits=2, col.names = c("Congruency", "Mean", "SD", "High 95 CI", "Low 95 CI"))
 ```
+Slight rounding errors in incongruent latency CIs
+```{r}
+compareValues(reportedValue=529, obtainedValue = 529.5436)
+compareValues(reportedValue=402, obtainedValue = 401.4274)
+```
+
+> Paired t-tests revealed that participants were faster to respond to their partner than their friend on congruent trials, MPARTNER = 378 ms, MFRIEND = 400 ms, t(18) = 2.70, p = 0.015, and slower to respond to their partner compared to their friend on incongruent trials, MPARTNER = 476 ms, MFRIEND = 454 ms, t(18) = 1.89, p = 0.075. 
+
+```{r}
+kable(dataset2.long %>%
+        group_by(congruency, relationship) %>%
+        summarize(mean=mean(mean_latency)))
+t.test(mean_latency ~ relationship, data=subset(dataset2.long, dataset2.long$congruency=="CONG"), paired=T)
+t.test(mean_latency ~ relationship, data=subset(dataset2.long, dataset2.long$congruency=="INCONG"), paired=T)
+
+
+```
+Again, minor rounding errors in the reported values. 
+```{r}
+compareValues(reportedValue = 378, obtainedValue = 378.8574)
+compareValues(reportedValue = 400, obtainedValue = 400.5937)
+compareValues(reportedValue = 454, obtainedValue = 454.4963)
+
+```
+
+
+> The absolute difference in RT between trials featuring the partner and the friend did not significantly differ for congruent vs. incongruent conditions, MCONG = 34.3 ms, MINCONG = 38.1 ms, t(18) = 0.36, p = 0.725. This suggested that the effects of Relationship were observed relatively equally in both congruent and incongruent trials.
+
+Re-calcualte the difference scores
+```{r}
+dataset2$abspfdiff_cong = abs(dataset2$M_CONG_P - dataset2$M_CONG_F)
+dataset2$abspfdiff_incong = abs(dataset2$M_INCONG_P - dataset2$M_INCONG_F)
+```
+
+Compare using a t.test
+```{r}
+t.test(dataset2$abspfdiff_cong, dataset2$abspfdiff_incong, var.equal = T, paired = T)
+mean(dataset2$abspfdiff_cong)
+mean(dataset2$abspfdiff_incong)
+```
+
+> Next, adult attachment scores were added to the analyses to investigate how these were related to automatic imitation. As each participant had four separate scores indicating their attachment to their partner and to their friend, a linear mixed effects model was deemed a suitable alternative to standard repeated-measures ANCOVA as it allows for covariates that differ for different levels of the repeated factor. The dependent variable was the congruency effect (CE), calculated by subtracting the mean RT for incongruent trials from those for congruent trials, for ‘partner’ and ‘friend’ separately. Using GENLINMIXED in SPSS 21, a fully-factorial model was fitted with one within-subjects categorical predictor, Relationship (platonic vs. romantic), and two standardised continuous between-subjects predictors, ANX and AVO. A random factor, representing the intercept for each participant, was also entered, to take into account the within-subjects nature of the data.
+
+First, calculate congruency effect. 
+```{r}
+#START HERE - SHOULD BE WORKING BUT IT IS NOT
+dataset2.long$congruency = as.factor(dataset2.long$congruency)
+spread(dataset2.long, congruency, mean_latency, convert=T, drop=T)
+
+
+```
+
 
 ## Step 5: Conclusion
 
