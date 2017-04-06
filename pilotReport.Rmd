@@ -10,7 +10,7 @@ output:
 #### Pilot: Alicia Hofelich Mohr
 #### Co-pilot: Tom Hardwicke  
 #### Start date: 03-31-2017
-#### End date: [Insert end date - use US format]   
+#### End date: 04-05-2017   
 
 -------
 
@@ -19,7 +19,7 @@ Researchers investigated the extent to which participants automatically imitate 
 
 The extent to which latency was affected by congruency of stimulus, type of partner (platonic versus romantic) and attachement style was tested. 
 
-It appears that two participants were removed for having attachment scores over two SD of the group mean (IDs 5 and 7). These ids are missing from the dataset, so there is no way to confirm this statement. The raw EMG data is also missing and latency appears to be captured in the variable "LENGTH", although the lack of metadata included with the labels makes this difficult to confirm. 
+It appears that two participants were removed for having attachment scores over two SD of the group mean (IDs 5 and 7). These ids are missing from the dataset, so there is no way to confirm this statement. The raw EMG data is also missing and the lack of metadata requires some exploration of the data to determine which variables contain what information. 
 
 ------
 
@@ -67,7 +67,7 @@ dataset2 = read_excel(path="data/data.xlsx", sheet = 2)
 ## Step 3: Tidy data
 
 The lack of any usable metadata makes it very difficult to know what each column is, and what the values within columns represent. 
-```{r}
+```{r, results='hide'}
 head(dataset1)
 summary(dataset1)
 ```
@@ -95,7 +95,7 @@ No idea what Baseline_M is.
 
 Dataset2 needs to be reshaped in order to run the tests described. 
 ```{r}
-#add ID variable (1-21, missing 5 and 7 - have to assume they are in the same order... )
+#add ID variable (1-21, missing 5 and 7 - have to assume they are in the same order, since no IDs were included... )
 dataset2$ID = c(1:4, 6, 8:21)
 dataset2.long = gather(dataset2, key=type, value=mean_latency, M_CONG_P:M_INCONG_F)
 dataset2.long$congruency = gsub("M_|_P|_F", "", dataset2.long$type)
@@ -117,7 +117,7 @@ dataset3$CE = dataset3$INCONG - dataset3$CONG
 dataset1$relationship = ifelse(dataset1$VID_FACE==1, "P", "F")
 
 #Merge in the AVO and ANX scores into the data
-dataset3 = merge(dataset3, subset(dataset1, select=c("id1", "relationship", "AVO", "ANX", "ZAVO", "ZANX")), by.x=c("ID", "relationship"), by.y=c("id1", "relationship"))
+dataset3 = merge(dataset3, subset(dataset1, select=c("id1", "relationship", "AVO", "ANX", "ZAVO", "ZANX", "ZANX_flipped", "ZAVO_flipped")), by.x=c("ID", "relationship"), by.y=c("id1", "relationship"))
 
 ```
 
@@ -155,11 +155,14 @@ kable(dataset1 %>%
 
 t.test(AVO ~ VID_FACE, data=dataset1, paired=T)
 ```
-Matches reported results. 
+Matches reported results, minor rounding error in t-value. 
+```{r}
+compareValues(reportedValue = 5.28, obtainedValue = 5.2875)
+```
 
 > There were no gender differences in any of the attachment scores (all p-values > 0.11).
 
-Unclear what test they used - probably a t-test, perhaps separate t-tests for each test/relationship since they said "all" p-values rather than "both"?
+Unclear what test they used - perhaps separate t-tests for each test/relationship since they said "all" p-values rather than "both"?
 ```{r}
 t.test(AVO ~ gender, data=subset(dataset1, dataset1$VID_FACE==1), paired=FALSE)
 t.test(AVO ~ gender, data=subset(dataset1, dataset1$VID_FACE==2), paired=FALSE)
@@ -169,25 +172,22 @@ t.test(ANX ~ gender, data=subset(dataset1, dataset1$VID_FACE==2), paired=FALSE)
 
 Yes, the separate t-tests seem to match the results they report. 
 
-Although if done in an ANOVA (which is what I had tried first), it's not the same result. But if this is about reproducing what they did, it passes. 
-```{r}
-summary(aov(AVO ~ gender + Error(factor(id1)), data=dataset1))
-summary(aov(ANX ~ gender + Error(factor(id1)), data=dataset1))
-```
-
 
 ### Inferential statistics
 
 > To obtain a broad understanding of automatic imitation of partners and friends before attachment was considered, we first carried out a basic repeated-measures ANOVA with two within-subjects factors, Congruency (congruent vs. incongruent) and Relationship (platonic vs. romantic). This revealed an expected large main effect of Congruency, F(1, 18) = 91.8, p < 0.001, whereby participants were significantly faster to respond to congruent trials, M = 390 ms, 95% CI[333, 447], than incongruent trials, M = 465 ms, 95% CI[402, 529]. Importantly, this effect was significantly moderated by Relationship, F(1, 18) = 14.96, p = 0.001. 
 
-Running the RM anova and calculating table. 
+Run the RM anova and calculate table:
 ```{r}
 summary(aov(mean_latency ~ congruency*relationship + Error(factor(ID)/(congruency*relationship)), data=dataset2.long))
 kable(dataset2.long %>%
   group_by(congruency) %>%
   summarize(mean = mean(mean_latency), sd=sd(mean_latency), hci = (mean(mean_latency) + 2.10*(sd(mean_latency)/sqrt(19))), lci = (mean(mean_latency) - 2.10*(sd(mean_latency)/sqrt(19)))),digits=2, col.names = c("Congruency", "Mean", "SD", "High 95 CI", "Low 95 CI"))
 ```
+
+
 Slight rounding errors in incongruent latency CIs
+
 ```{r}
 compareValues(reportedValue=529, obtainedValue = 529.5436)
 compareValues(reportedValue=402, obtainedValue = 401.4274)
@@ -205,7 +205,7 @@ t.test(mean_latency ~ relationship, data=subset(dataset2.long, dataset2.long$con
 
 
 ```
-Again, minor rounding errors in the reported values. 
+Again, minor rounding errors in the reported values, but test results replicate. 
 ```{r}
 compareValues(reportedValue = 378, obtainedValue = 378.8574)
 compareValues(reportedValue = 400, obtainedValue = 400.5937)
@@ -235,90 +235,172 @@ Values match reported results.
 Needed to reshape and merge the data (above in Preprocessing) in order to get it into the right shape for this analysis. 
 
 > This model was a significant fit for the data, F(7, 30) = 19.25, p < 0.001. Inspection of the model parameters revealed a main effect of Relationship, F(1, 30) = 4.40, p = 0.044, whereby individuals showed significantly greater mimicry of their partners than they did their friends, controlling for differences in ANX and AVO attachment style (see Fig. 2).
+> This effect was significantly moderated by ANX, F(1, 30) = 9.25, p = 0.005, whereby ANX had a significantly different effect on mimicry of partners compared to friends. For the partner, the parameter estimate of the effect of ANX on mimicry was positive, M = 19 ms, 95% CI[−1, 40], p = 0.064, and for the friend was negative, M = −15 ms, 95% CI[−26, −4], p = 0.012. In contrast, there was no significant main effect of AVO attachment style, F(1, 30) = 0.57, p = 0.456, nor did it interact with Relationship, F(1, 30) = 0.51, p = 0.479. These findings are summarised in Fig. 3.
 
-Run linear mixed effects model. START HERE
+
+Run linear mixed effects model. Because stats programs vary in how they calculate these models, I will first try it in R to see if the general patterns of signficance are similar, and then re-run in SPSS using the GENLINMIXED procedure they describe. 
 ```{r}
 #to get the overall fit p value:
 basemodel = lme(CE ~ 1, random = ~1|ID/relationship, data=dataset3, method="ML")
 mle1 = lme(CE ~ relationship*ZANX*ZAVO, random= ~1|ID/relationship, data=dataset3, method="ML")
 anova(basemodel, mle1)
+```
+While the overall model "fit" is not reported in the lme output, an approximation can be calcualted using a model based on means. The comparison between this "baseline" model and the full model is similar to the reported finding that the model fit well (specific values are different, but will not report as error because of the differences in programs).
 
+
+```{r}
 #Parameter estimates
 anova(mle1, type="marginal") #use Type III SS for comparison to SPSS
 summary(mle1)
 
 ```
 
-The authors used GENLINMIXED in SPSS, rather than the nlme mixed pagckage in R, so it is very likely that  differences seen here are due to the different ways each program calculates the model. 
+Because of the differences in programs used, it is very likely that  differences seen here are due to the different ways each program calculates the model. 
 
-However, there are some inconsistencies: 
-* The reported denominator df are not the same as I see (30 reported versus 12 observed here). 
-* Overall model "fit" is not reported in the lme output, but an approximation is calcualted using a model based on means. The comparison between this "baseline" model and the full model is similar to the reported finding that the model fit well
-* relationship was right at significance, rather than highly significant 
-* interaction between relationship and ZANX was not signficiant 
-* Parameter estimates and t-values did not match up 
+However, there are some notable inconsistencies: 
+
+* The reported denominator df are not the same as I see (30 reported versus 12 observed here).
+* The main effect of relationship was right at significance, rather than highly significant 
+* The interaction between relationship and ZANX was not signficiant 
+* Parameter estimates and t-values did not match up for the interaction 
 
 In order to determine whether I get the same result in SPSS using the procedure described, I wrote out the data file I used to run the mixed model and read it into SPSS. 
 ```{r, run=FALSE}
-write.csv(dataset3, file="TestforSPSS.csv", row.names = FALSE)
+write.csv(dataset3, file="spss/TestforSPSS.csv", row.names = FALSE)
 ```
 
 The following SPSS syntax was used to read in the .csv and run a GENLINMIXED model as described in the results. 
 
-
-* Read in data file. 
-GET DATA  /TYPE=TXT
-  /FILE="\\tsclient\Desktop\TestforSPSS.csv"
-  /DELCASE=LINE
-  /DELIMITERS=","
-  /QUALIFIER='"'
-  /ARRANGEMENT=DELIMITED
-  /FIRSTCASE=2
-  /IMPORTCASE=ALL
-  /VARIABLES=
-  ID F2.0
-  relationship A1
-  CONG F6.2
-  INCONG F6.2
-  CE F16.14
-  AVO.x F4.2
-  ANX.x F4.2
-  AVO.y F4.2
-  ANX.y F4.2
-  ZAVO F8.5
-  ZANX F8.5.
-CACHE.
-EXECUTE.
-DATASET NAME DataSet1 WINDOW=FRONT.
-
-
-DATASET ACTIVATE DataSet1.
-* Run GENLINMIXED as described in paper. 
-*Generalized Linear Mixed Models.
-GENLINMIXED
-  /DATA_STRUCTURE SUBJECTS=ID REPEATED_MEASURES=relationship COVARIANCE_TYPE=DIAGONAL
-  /FIELDS TARGET=CE TRIALS=NONE OFFSET=NONE
-  /TARGET_OPTIONS DISTRIBUTION=NORMAL LINK=IDENTITY
-  /FIXED  EFFECTS= relationship ZAVO ZANX relationship*ZAVO relationship*ZANX ZAVO*ZANX  relationship*ZANX*ZAVO
-    USE_INTERCEPT=TRUE
-  /RANDOM  USE_INTERCEPT=TRUE SUBJECTS=ID COVARIANCE_TYPE=VARIANCE_COMPONENTS 
-  /BUILD_OPTIONS TARGET_CATEGORY_ORDER=ASCENDING INPUTS_CATEGORY_ORDER=ASCENDING MAX_ITERATIONS=100 
-    CONFIDENCE_LEVEL=95 DF_METHOD=RESIDUAL COVB=MODEL PCONVERGE=0.000001(ABSOLUTE) SCORING=0 
-    SINGULAR=0.000000000001
-  /EMMEANS_OPTIONS SCALE=ORIGINAL PADJUST=LSD.
+```{r}
+# * Read in data file. 
+# GET DATA  /TYPE=TXT
+#   /FILE="spss/TestforSPSS.csv"
+#   /DELCASE=LINE
+#   /DELIMITERS=","
+#   /QUALIFIER='"'
+#   /ARRANGEMENT=DELIMITED
+#   /FIRSTCASE=2
+#   /IMPORTCASE=ALL
+#   /VARIABLES=
+#   ID F2.0
+#   relationship A1
+#   CONG F6.2
+#   INCONG F6.2
+#   CE F16.14
+#   AVO.x F4.2
+#   ANX.x F4.2
+#   AVO.y F4.2
+#   ANX.y F4.2
+#   ZAVO F8.5
+#   ZANX F8.5.
+# CACHE.
+# EXECUTE.
+# DATASET NAME DataSet1 WINDOW=FRONT.
+# 
+# 
+# DATASET ACTIVATE DataSet1.
+# * Run GENLINMIXED as described in paper. 
+# *Generalized Linear Mixed Models.
+# GENLINMIXED
+#   /DATA_STRUCTURE SUBJECTS=ID REPEATED_MEASURES=relationship COVARIANCE_TYPE=DIAGONAL
+#   /FIELDS TARGET=CE TRIALS=NONE OFFSET=NONE
+#   /TARGET_OPTIONS DISTRIBUTION=NORMAL LINK=IDENTITY
+#   /FIXED  EFFECTS= relationship ZAVO ZANX relationship*ZAVO relationship*ZANX ZAVO*ZANX  relationship*ZANX*ZAVO
+#     USE_INTERCEPT=TRUE
+#   /RANDOM  USE_INTERCEPT=TRUE SUBJECTS=ID COVARIANCE_TYPE=VARIANCE_COMPONENTS 
+#   /BUILD_OPTIONS TARGET_CATEGORY_ORDER=ASCENDING INPUTS_CATEGORY_ORDER=ASCENDING MAX_ITERATIONS=100 
+#     CONFIDENCE_LEVEL=95 DF_METHOD=RESIDUAL COVB=MODEL PCONVERGE=0.000001(ABSOLUTE) SCORING=0 
+#     SINGULAR=0.000000000001
+#   /EMMEANS_OPTIONS SCALE=ORIGINAL PADJUST=LSD.
+```
 
 The Output was as follows:
 
-(PASTE IN PICTURES!!)
+Fixed effects:
+![SPSS Fixed Effects](spss/SPSS_Output_FixedEffects.png)
+
+Ficed coefficient estimates: 
+![SPSS Coefficients](spss/SPSS_Output_FixedCoefficients.png)
+
+One noticeable difference between this model and the results reported in the paper is that the denominator degrees of freedom do not match - they report an overall F of (7,30) while the data I have produces an F of (7, 28). Because I had to reshape and merge these datasets, it is possible they ran this test on a third dataset that wasn't shared, or perhaps included one of the two excluded participants. Hard to tell without more information. 
+
+> This model was a significant fit for the data, F(7, 30) = 19.25, p < 0.001. 
+
+In SPSS, we also see a signficant fit for the corrected model, but the tests don't quite match F(7,28) = 4.236, p = .003. Hard to compare p values because they report < .001, so look at F values. 
+```{r}
+compareValues(reportedValue = 19.25, obtainedValue = 4.236)
+```
+
+
+> Inspection of the model parameters revealed a main effect of Relationship, F(1, 30) = 4.40, p = 0.044, whereby individuals showed significantly greater mimicry of their partners than they did their friends, controlling for differences in ANX and AVO attachment style (see Fig. 2).
+
+This was also found in my re-test, and this effect was more significant than they reported, F(1,28) = 5.742, p = .023.
+```{r}
+compareValues(reportedValue = .044, obtainedValue = .023, isP=T)
+```
+
+> This effect was significantly moderated by ANX, F(1, 30) = 9.25, p = 0.005, whereby ANX had a significantly different effect on mimicry of partners compared to friends. For the partner, the parameter estimate of the effect of ANX on mimicry was positive, M = 19 ms, 95% CI[−1, 40], p = 0.064, and for the friend was negative, M = −15 ms, 95% CI[−26, −4], p = 0.012. 
+
+I did not see a signficiant interaction between ANX and relationship in this data: F(1,28) = 2.606, p = .118. The parameter estimates were in the same direction, but the values were different. The parameter estimates were also not siginificantly different from zero, likely because of the huge standard errors.  
+```{r}
+compareValues(reportedValue = .005, obtainedValue = .118, isP=T)
+```
+
+> In contrast, there was no significant main effect of AVO attachment style, F(1, 30) = 0.57, p = 0.456, nor did it interact with Relationship, F(1, 30) = 0.51, p = 0.479. These findings are summarised in Fig. 3.
+
+I also found both these values to be not significant, although the values did differ. 
+```{r}
+compareValues(reportedValue = .456, obtainedValue = .791)
+compareValues(reportedValue = .479, obtainedValue = .282)
+```
+
+Out of curiosity (and in part because of the odd degrees of freedom), I looked to see what would happen if a normal OLS regression was run that did not take ID into account - this produced the same degree of freedom numbers reported by the authors.  
+```{r}
+summary(aov(CE ~ relationship*ZAVO*ZANX, data=dataset3))
+```
+it also produced a significant and almost significant result for the two parameters (relationship and ZANX*relationship) they reported. It almost seems possible that the statistical tests were accidentally flipped (reported the ME stats for the interaction and vice versa)?
+
+It also doesn't appear to match better when the non-standardized attachement scores were used.
+```{r}
+#to get the overall fit p value:
+mle2 = lme(CE ~ relationship*ANX*AVO, random= ~1|ID/relationship, data=dataset3, method="ML")
+anova(basemodel, mle1)
+
+#Parameter estimates
+anova(mle2, type="marginal") #use Type III SS for comparison to SPSS
+
+```
+
+
+> To investigate whether the level of anxious attachment in the romantic relationship affected levels of automatic imitation in the platonic relationship, and vice versa, we repeated the main analysis but entered anxious attachment scores within the other relationship in place of our standard ANX measure. This revealed no main effect of cross-relationship ANX, F(1, 34) = 1.48, p = 0.233, nor an interaction between relationship type and ANX, F(1, 34) = 1.17, p > 0.250. These results suggest that only the anx- ious attachment style within a specific relationship predicted auto- matic imitation within that relationship.
+
+```{r}
+mle3 = lme(CE ~ relationship*ZANX_flipped*ZAVO, random= ~1|ID/relationship, data=dataset3, method="ML")
+
+anova(mle3, type="marginal") #use Type III SS for comparison to SPSS
+
+```
+
+Also found no main effect of crossed relationship, nor interaction between relationship and the flipped value. Specific p values are not the same, but since I only ran this in R, it is to be expected. 
+
 
 ## Step 5: Conclusion
 
 ```{r}
+codReport(Report_Type = 'pilot',
+          Article_ID = 'NoMcC', 
+          Insufficient_Information_Errors = 0,
+          Decision_Errors = 1, 
+          Major_Numerical_Errors = 5, 
+          Minor_Numerical_Errors = 6)
 ```
 
-[Please also include a brief text summary describing your findings. If this reproducibility check was a failure, you should note any suggestions as to what you think the likely cause(s) might be.]
+Despite having very little decriptive metadata along with the datasets, most of the results were able to be reproduced with only minor rounding variation. 
 
-[This function will output information about the package versions used in this report:]
+However, I was not able to reproduce the mixed linear model described in the results section. Even within statistical programs, different procedures calculate these models different, so some variance is to be expected. However, I did not see the same pattern of signficiant results (specificially in the interaction between relationship and ANX attachment scores), even when I attempted to reproduce the results in SPSS using the same GENLINMIXED procedure. It's worth noting that I ran the results on SPSS 23, and the authors used SPSS 21, which could have implemented a different procedure for this model. 
+
+It's unclear whether the program was the culprit, or whether the dataset they used for this particular test was different than the datasets they shared. I had to reshape and merge components of the two shared datasets, so it is possible different decisions and execution of this could have also lead to discrepencies. In my exploration of what could have happened, I also noticed that the DF numbers and the specific tests seemed more similar to regular ANOVA/OLS without the random factor of ID or repeated factor of relationship, with the results for the main effect and interaction flipped. It's a stretch, but the only thing I found that was close to what was reported. Overall, this emphasizes the importance of including specific code along with data submissions so we can verify whether errors were in the execution of what they did or the description of what they did (or both). 
+
 
 ```{r session_info, include=TRUE, echo=TRUE, results='markup'}
 devtools::session_info()
