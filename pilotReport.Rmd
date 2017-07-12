@@ -8,7 +8,6 @@ output:
 
 #### Article ID: NoMcC
 #### Pilot: Alicia Hofelich Mohr
-#### Co-pilot: Tom Hardwicke  
 #### Start date: 03-31-2017
 #### End date: 04-05-2017   
 
