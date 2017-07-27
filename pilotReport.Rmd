@@ -328,7 +328,7 @@ One noticeable difference between this model and the results reported in the pap
 
 In SPSS, we also see a significant fit for the corrected model, but the tests don't quite match F(7,28) = 4.236, p = .003. Hard to compare p values because they report < .001, so look at F values. 
 ```{r}
-compareValues(reportedValue = 19.25, obtainedValue = 4.236)
+#compareValues(reportedValue = 19.25, obtainedValue = 4.236)
 ```
 
 
@@ -336,22 +336,22 @@ compareValues(reportedValue = 19.25, obtainedValue = 4.236)
 
 This was also found in my re-test, and this effect was more significant than they reported, F(1,28) = 5.742, p = .023.
 ```{r}
-compareValues(reportedValue = .044, obtainedValue = .023, isP=T)
+#compareValues(reportedValue = .044, obtainedValue = .023, isP=T)
 ```
 
 > This effect was significantly moderated by ANX, F(1, 30) = 9.25, p = 0.005, whereby ANX had a significantly different effect on mimicry of partners compared to friends. For the partner, the parameter estimate of the effect of ANX on mimicry was positive, M = 19 ms, 95% CI[−1, 40], p = 0.064, and for the friend was negative, M = −15 ms, 95% CI[−26, −4], p = 0.012. 
 
 I did not see a significant interaction between ANX and relationship in this data: F(1,28) = 2.606, p = .118. The parameter estimates were in the same direction, but the values were different. The parameter estimates were also not significantly different from zero, likely because of the huge standard errors.  
 ```{r}
-compareValues(reportedValue = .005, obtainedValue = .118, isP=T)
+#compareValues(reportedValue = .005, obtainedValue = .118, isP=T)
 ```
 
 > In contrast, there was no significant main effect of AVO attachment style, F(1, 30) = 0.57, p = 0.456, nor did it interact with Relationship, F(1, 30) = 0.51, p = 0.479. These findings are summarised in Fig. 3.
 
 I also found both these values to be not significant, although the values did differ. 
 ```{r}
-compareValues(reportedValue = .456, obtainedValue = .791)
-compareValues(reportedValue = .479, obtainedValue = .282)
+#compareValues(reportedValue = .456, obtainedValue = .791)
+#compareValues(reportedValue = .479, obtainedValue = .282)
 ```
 
 Out of curiosity (and in part because of the odd degrees of freedom), I looked to see what would happen if a normal OLS regression was run that did not take ID into account - this produced the same degree of freedom numbers reported by the authors.  
@@ -384,22 +384,97 @@ anova(mle3, type="marginal") #use Type III SS for comparison to SPSS
 Also found no main effect of crossed relationship, nor interaction between relationship and the flipped value. Specific p values are not the same, but since I only ran this in R, it is to be expected. 
 
 
+## UPDATE FROM AUTHOR
+
+The original syntax was requested from the author in order to replicated the mixed models analysis: 
+
+The following syntax was used in SPSS (Version 24, Mac OS). The main differences between this and what I attempted above is that the authors used an identity covariance structure, while I used the default diagonal covariance structure, which changed how the model was estimated.   
+
+```{r}
+# GET DATA  /TYPE=TXT
+#   /FILE="/Users/hofelich/Documents/DataAnalysis/Cognition "+
+#     "Reproducibility/set_NoMcC/spss/TestforSPSS.csv"
+#   /DELCASE=LINE
+#   /DELIMITERS=","
+#   /QUALIFIER='"'
+#   /ARRANGEMENT=DELIMITED
+#   /FIRSTCASE=2
+#   /IMPORTCASE=ALL
+#   /VARIABLES=
+#   ID F2.0
+#   relationship A1
+#   CONG F6.2
+#   INCONG F6.2
+#   CE F16.14
+#   AVO.x F4.2
+#   ANX.x F4.2
+#   AVO.y F4.2
+#   ANX.y F4.2
+#   ZAVO F8.5
+#   ZANX F8.5.
+# CACHE.
+# EXECUTE.
+# DATASET NAME DataSet1 WINDOW=FRONT.
+# 
+# GENLINMIXED
+#   /DATA_STRUCTURE SUBJECTS=ID REPEATED_MEASURES=relationship COVARIANCE_TYPE=IDENTITY
+#   /FIELDS TARGET=CE TRIALS=NONE OFFSET=NONE
+#   /TARGET_OPTIONS DISTRIBUTION=NORMAL LINK=IDENTITY
+#   /FIXED  EFFECTS=relationship ZANX relationship*ZANX ZAVO relationship*ZAVO ZAVO*ZANX relationship*ZAVO*ZANX 
+#     USE_INTERCEPT=TRUE
+#   /RANDOM USE_INTERCEPT=TRUE SUBJECTS=ID COVARIANCE_TYPE=VARIANCE_COMPONENTS 
+#   /BUILD_OPTIONS TARGET_CATEGORY_ORDER=ASCENDING INPUTS_CATEGORY_ORDER=ASCENDING MAX_ITERATIONS=100 
+#     CONFIDENCE_LEVEL=95 DF_METHOD=RESIDUAL COVB=ROBUST
+#   /EMMEANS TABLES=relationship COMPARE=relationship CONTRAST=SIMPLE 
+#   /EMMEANS_OPTIONS SCALE=ORIGINAL PADJUST=LSD.
+
+```
+
+The output was as follows: 
+
+Fixed effects:
+![SPSS Fixed Effects](spss/Updated_SPSS_Output_FixedEffects.png)
+
+
+> This model was a significant fit for the data, F(7, 30) = 19.25, p < 0.001. Inspection of the model parameters revealed a main effect of Relationship, F(1, 30) = 4.40, p = 0.044, whereby individuals showed significantly greater mimicry of their partners than they did their friends, controlling for differences in ANX and AVO attachment style (see Fig. 2).
+
+```{r}
+#over estimated value for model (compare Fs)
+compareValues(reportedValue=19.25, obtainedValue=9.202)
+
+#under estimated value for relationship
+compareValues(reportedValue = .044, obtainedValue = .001, isP=T)
+```
+
+> This effect was significantly moderated by ANX, F(1, 30) = 9.25, p = 0.005, whereby ANX had a significantly different effect on mimicry of partners compared to friends. For the partner, the parameter estimate of the effect of ANX on mimicry was positive, M = 19 ms, 95% CI[−1, 40], p = 0.064, and for the friend was negative, M = −15 ms, 95% CI[−26, −4], p = 0.012. In contrast, there was no significant main effect of AVO attachment style, F(1, 30) = 0.57, p = 0.456, nor did it interact with Relationship, F(1, 30) = 0.51, p = 0.479. These findings are summarised in Fig. 3.
+
+```{r}
+compareValues(reportedValue = .005, obtainedValue = .016 , isP=T)
+```
+
+Fixed coefficient estimates: 
+![SPSS Coefficients](spss/Updated_SPSS_Output_FixedCoefficients.png)
+
+With this updated syntax, the directions and significance of all reported results are the same. The overall test was significant, although the specific F value and df differed (which could be due to version differences in SPSS). 
+
+I also see a significant main effect of relationship, and a significant interaction between relationship and ANX. The directions of the reported effects are the same, although the values differ (again, could very well be due to a software difference). 
+
+I updated the decision errors below. 
+
 ## Step 5: Conclusion
 
 ```{r}
 codReport(Report_Type = 'pilot',
           Article_ID = 'NoMcC', 
           Insufficient_Information_Errors = 0,
-          Decision_Errors = 1, 
-          Major_Numerical_Errors = 5, 
-          Minor_Numerical_Errors = 6)
+          Decision_Errors = 0, 
+          Major_Numerical_Errors = 3, 
+          Minor_Numerical_Errors = 5)
 ```
 
 Despite having very little descriptive metadata along with the datasets, most of the results were able to be reproduced with only minor rounding variation. 
 
-However, I was not able to reproduce the mixed linear model described in the results section. Even within statistical programs, different procedures calculate these models different, so some variance is to be expected. However, I did not see the same pattern of significant results (specifically in the interaction between relationship and ANX attachment scores), even when I attempted to reproduce the results in SPSS using the same GENLINMIXED procedure. It's worth noting that I ran the results on SPSS 23, and the authors used SPSS 21, which could have implemented a different procedure for this model. 
-
-It's unclear whether the program was the culprit, or whether the dataset they used for this particular test was different than the datasets they shared. I had to reshape and merge components of the two shared datasets, so it is possible different decisions and execution of this could have also lead to discrepancies. In my exploration of what could have happened, I also noticed that the DF numbers and the specific tests seemed more similar to regular ANOVA/OLS without the random factor of ID or repeated factor of relationship, with the results for the main effect and interaction flipped. It's a stretch, but the only thing I found that was close to what was reported. Overall, this emphasizes the importance of including specific code along with data submissions so we can verify whether errors were in the execution of what they did or the description of what they did (or both). 
+With the updated syntax from the author, I replicated the direction of all the mixed model tests. Many of the major numerical errors can frome this test - it's hard to tell whether they are due to differences in SPSS version or are actually major numerical reporting errors. 
 
 
 ```{r session_info, include=TRUE, echo=TRUE, results='markup'}
