@@ -271,149 +271,48 @@ write.csv(dataset3, file="spss/TestforSPSS.csv", row.names = FALSE)
 
 The following SPSS syntax was used to read in the .csv and run a GENLINMIXED model as described in the results. 
 
-```{r}
-# * Read in data file. 
-# GET DATA  /TYPE=TXT
-#   /FILE="spss/TestforSPSS.csv"
-#   /DELCASE=LINE
-#   /DELIMITERS=","
-#   /QUALIFIER='"'
-#   /ARRANGEMENT=DELIMITED
-#   /FIRSTCASE=2
-#   /IMPORTCASE=ALL
-#   /VARIABLES=
-#   ID F2.0
-#   relationship A1
-#   CONG F6.2
-#   INCONG F6.2
-#   CE F16.14
-#   AVO.x F4.2
-#   ANX.x F4.2
-#   AVO.y F4.2
-#   ANX.y F4.2
-#   ZAVO F8.5
-#   ZANX F8.5.
-# CACHE.
-# EXECUTE.
-# DATASET NAME DataSet1 WINDOW=FRONT.
-# 
-# 
-# DATASET ACTIVATE DataSet1.
-# * Run GENLINMIXED as described in paper. 
-# *Generalized Linear Mixed Models.
-# GENLINMIXED
-#   /DATA_STRUCTURE SUBJECTS=ID REPEATED_MEASURES=relationship COVARIANCE_TYPE=DIAGONAL
-#   /FIELDS TARGET=CE TRIALS=NONE OFFSET=NONE
-#   /TARGET_OPTIONS DISTRIBUTION=NORMAL LINK=IDENTITY
-#   /FIXED  EFFECTS= relationship ZAVO ZANX relationship*ZAVO relationship*ZANX ZAVO*ZANX  relationship*ZANX*ZAVO
-#     USE_INTERCEPT=TRUE
-#   /RANDOM  USE_INTERCEPT=TRUE SUBJECTS=ID COVARIANCE_TYPE=VARIANCE_COMPONENTS 
-#   /BUILD_OPTIONS TARGET_CATEGORY_ORDER=ASCENDING INPUTS_CATEGORY_ORDER=ASCENDING MAX_ITERATIONS=100 
-#     CONFIDENCE_LEVEL=95 DF_METHOD=RESIDUAL COVB=MODEL PCONVERGE=0.000001(ABSOLUTE) SCORING=0 
-#     SINGULAR=0.000000000001
-#   /EMMEANS_OPTIONS SCALE=ORIGINAL PADJUST=LSD.
-```
-
-The Output was as follows:
-
-Fixed effects:
-![SPSS Fixed Effects](spss/SPSS_Output_FixedEffects.png)
-
-Fixed coefficient estimates: 
-![SPSS Coefficients](spss/SPSS_Output_FixedCoefficients.png)
-
-One noticeable difference between this model and the results reported in the paper is that the denominator degrees of freedom do not match - they report an overall F of (7,30) while the data I have produces an F of (7, 28). Because I had to reshape and merge these datasets, it is possible they ran this test on a third dataset that wasn't shared, or perhaps included one of the two excluded participants. Hard to tell without more information. 
-
-> This model was a significant fit for the data, F(7, 30) = 19.25, p < 0.001. 
-
-In SPSS, we also see a significant fit for the corrected model, but the tests don't quite match F(7,28) = 4.236, p = .003. Hard to compare p values because they report < .001, so look at F values. 
-```{r}
-#compareValues(reportedValue = 19.25, obtainedValue = 4.236)
-```
-
-
-> Inspection of the model parameters revealed a main effect of Relationship, F(1, 30) = 4.40, p = 0.044, whereby individuals showed significantly greater mimicry of their partners than they did their friends, controlling for differences in ANX and AVO attachment style (see Fig. 2).
-
-This was also found in my re-test, and this effect was more significant than they reported, F(1,28) = 5.742, p = .023.
-```{r}
-#compareValues(reportedValue = .044, obtainedValue = .023, isP=T)
-```
-
-> This effect was significantly moderated by ANX, F(1, 30) = 9.25, p = 0.005, whereby ANX had a significantly different effect on mimicry of partners compared to friends. For the partner, the parameter estimate of the effect of ANX on mimicry was positive, M = 19 ms, 95% CI[−1, 40], p = 0.064, and for the friend was negative, M = −15 ms, 95% CI[−26, −4], p = 0.012. 
-
-I did not see a significant interaction between ANX and relationship in this data: F(1,28) = 2.606, p = .118. The parameter estimates were in the same direction, but the values were different. The parameter estimates were also not significantly different from zero, likely because of the huge standard errors.  
-```{r}
-#compareValues(reportedValue = .005, obtainedValue = .118, isP=T)
-```
-
-> In contrast, there was no significant main effect of AVO attachment style, F(1, 30) = 0.57, p = 0.456, nor did it interact with Relationship, F(1, 30) = 0.51, p = 0.479. These findings are summarised in Fig. 3.
-
-I also found both these values to be not significant, although the values did differ. 
-```{r}
-#compareValues(reportedValue = .456, obtainedValue = .791)
-#compareValues(reportedValue = .479, obtainedValue = .282)
-```
-
-Out of curiosity (and in part because of the odd degrees of freedom), I looked to see what would happen if a normal OLS regression was run that did not take ID into account - this produced the same degree of freedom numbers reported by the authors.  
-```{r}
-summary(aov(CE ~ relationship*ZAVO*ZANX, data=dataset3))
-```
-it also produced a significant and almost significant result for the two parameters (relationship and ZANX*relationship) they reported. It almost seems possible that the statistical tests were accidentally flipped (reported the ME stats for the interaction and vice versa)?
-
-It also doesn't appear to match better when the non-standardized attachment scores were used.
-```{r}
-#to get the overall fit p value:
-mle2 = lme(CE ~ relationship*ANX*AVO, random= ~1|ID/relationship, data=dataset3, method="ML")
-anova(basemodel, mle1)
-
-#Parameter estimates
-anova(mle2, type="marginal") #use Type III SS for comparison to SPSS
-
-```
-
-
-> To investigate whether the level of anxious attachment in the romantic relationship affected levels of automatic imitation in the platonic relationship, and vice versa, we repeated the main analysis but entered anxious attachment scores within the other relationship in place of our standard ANX measure. This revealed no main effect of cross-relationship ANX, F(1, 34) = 1.48, p = 0.233, nor an interaction between relationship type and ANX, F(1, 34) = 1.17, p > 0.250. These results suggest that only the anx- ious attachment style within a specific relationship predicted auto- matic imitation within that relationship.
-
-```{r}
-mle3 = lme(CE ~ relationship*ZANX_flipped*ZAVO, random= ~1|ID/relationship, data=dataset3, method="ML")
-
-anova(mle3, type="marginal") #use Type III SS for comparison to SPSS
-
-```
-
-Also found no main effect of crossed relationship, nor interaction between relationship and the flipped value. Specific p values are not the same, but since I only ran this in R, it is to be expected. 
-
-
 ## UPDATE FROM AUTHOR
 
-The original syntax was requested from the author in order to replicated the mixed models analysis: 
+The original syntax was requested from the author in order to replicated the mixed models analysis. The authors also used the data from dataset1 to do this analysis. Because there were insufficient variable and value labels attached to the data, I did not know which columns corresponded to the variables described in the analysis, so had created a modified version of dataset2 for this analysis. 
 
-The following syntax was used in SPSS (Version 24, Mac OS). The main differences between this and what I attempted above is that the authors used an identity covariance structure, while I used the default diagonal covariance structure, which changed how the model was estimated.   
+The two files, however, were identical. I confimed this by first sorting the data in the same way, and then recoding the relationship variable into a numeric format to match the VID_FACE variable in dataset1. 
+```{r}
+dataset3 <- arrange(dataset3, ID, relationship)
+dataset1 <- arrange(dataset1, id1, desc(VID_FACE))
+
+#recode F and P as 2 and 1
+dataset3$relationshipnum <- ifelse(dataset3$relationship=="P", 1, 2)
+
+```
+
+Check matches for each variable in model
+```{r}
+all_equal(dataset1$id1, dataset3$ID)
+all_equal(dataset1$VID_FACE, dataset3$relationshipnum)
+all_equal(dataset1$BASELINE_M, dataset3$CE) #maybe due to rounding errors?
+all_equal(round(dataset1$BASELINE_M, 6), round(dataset3$CE, 6))
+all_equal(dataset1$ZANX, dataset3$ZANX)
+all_equal(dataset1$ZAVO, dataset3$ZAVO)
+
+```
+
+The only difference between the two datasets are in how the numeric values are stored for the congruent/incongruent difference. Rounding to 6 decimal points provides a TRUE result that they are identifical. However, the large stored decimal point in the CE variables produced an error when parsing the columns in the .csv file when read into SPSS initially. Therefore, the "TestforSPSS.csv" above was first converted to Excel .xlsx by opening in excel and saving as before it was read into SPSS. 
+
+The following syntax was used in SPSS (Version 24, Mac OS). The main differences between this and what I attempted in previous versions is that the authors used an identity covariance structure, while I used the default diagonal covariance structure, which changed how the model was estimated.   
+
 
 ```{r}
-# GET DATA  /TYPE=TXT
-#   /FILE="/Users/hofelich/Documents/DataAnalysis/Cognition "+
-#     "Reproducibility/set_NoMcC/spss/TestforSPSS.csv"
-#   /DELCASE=LINE
-#   /DELIMITERS=","
-#   /QUALIFIER='"'
-#   /ARRANGEMENT=DELIMITED
-#   /FIRSTCASE=2
-#   /IMPORTCASE=ALL
-#   /VARIABLES=
-#   ID F2.0
-#   relationship A1
-#   CONG F6.2
-#   INCONG F6.2
-#   CE F16.14
-#   AVO.x F4.2
-#   ANX.x F4.2
-#   AVO.y F4.2
-#   ANX.y F4.2
-#   ZAVO F8.5
-#   ZANX F8.5.
-# CACHE.
+# GET DATA
+#   /TYPE=XLSX
+#   /FILE='/Users/hofelich/Documents/DataAnalysis/Cognition '+
+#     'Reproducibility/set_NoMcC/spss/TestforSPSS.xlsx'
+#   /SHEET=name 'TestforSPSS'
+#   /CELLRANGE=FULL
+#   /READNAMES=ON
+#   /DATATYPEMIN PERCENTAGE=95.0
+#   /HIDDEN IGNORE=YES.
 # EXECUTE.
+
 # DATASET NAME DataSet1 WINDOW=FRONT.
 # 
 # GENLINMIXED
@@ -433,33 +332,38 @@ The following syntax was used in SPSS (Version 24, Mac OS). The main differences
 The output was as follows: 
 
 Fixed effects:
-![SPSS Fixed Effects](spss/Updated_SPSS_Output_FixedEffects.png)
+![SPSS Fixed Effects](spss/Updated_SPSS_Output_FixedEffects2.png)
 
 
 > This model was a significant fit for the data, F(7, 30) = 19.25, p < 0.001. Inspection of the model parameters revealed a main effect of Relationship, F(1, 30) = 4.40, p = 0.044, whereby individuals showed significantly greater mimicry of their partners than they did their friends, controlling for differences in ANX and AVO attachment style (see Fig. 2).
 
-```{r}
-#over estimated value for model (compare Fs)
-compareValues(reportedValue=19.25, obtainedValue=9.202)
-
-#under estimated value for relationship
-compareValues(reportedValue = .044, obtainedValue = .001, isP=T)
-```
+These values both seem to match reported perfectly. 
 
 > This effect was significantly moderated by ANX, F(1, 30) = 9.25, p = 0.005, whereby ANX had a significantly different effect on mimicry of partners compared to friends. For the partner, the parameter estimate of the effect of ANX on mimicry was positive, M = 19 ms, 95% CI[−1, 40], p = 0.064, and for the friend was negative, M = −15 ms, 95% CI[−26, −4], p = 0.012. In contrast, there was no significant main effect of AVO attachment style, F(1, 30) = 0.57, p = 0.456, nor did it interact with Relationship, F(1, 30) = 0.51, p = 0.479. These findings are summarised in Fig. 3.
 
-```{r}
-compareValues(reportedValue = .005, obtainedValue = .016 , isP=T)
-```
 
 Fixed coefficient estimates: 
-![SPSS Coefficients](spss/Updated_SPSS_Output_FixedCoefficients.png)
+![SPSS Coefficients](spss/Updated_SPSS_Output_FixedCoefficients2.png)
 
-With this updated syntax, the directions and significance of all reported results are the same. The overall test was significant, although the specific F value and df differed (which could be due to version differences in SPSS). 
+All the main effects replicate exactly. The only calculations I'm not sure ofare the confidence intervals around the estimated parameters for the interactions. Likely they were calculated by hand from the given parameters, as they are not reported in the SPSS output. 
 
-I also see a significant main effect of relationship, and a significant interaction between relationship and ANX. The directions of the reported effects are the same, although the values differ (again, could very well be due to a software difference). 
+```{r}
+#coefficient for anx*vid==1 (partner)
+(vid1 <- 34.555 - 15.036)
 
-I updated the decision errors below. 
+#coefficient for anx*vid==2 (friend)
+(vid2 <- vid1 - 34.562)
+```
+
+I'm not sure how they calculated the confience intervals or p values for this. 
+
+
+```{r}
+compareValues(reportedValue = 19, obtainedValue = 19.519)
+
+```
+
+
 
 ## Step 5: Conclusion
 
@@ -468,13 +372,13 @@ codReport(Report_Type = 'pilot',
           Article_ID = 'NoMcC', 
           Insufficient_Information_Errors = 0,
           Decision_Errors = 0, 
-          Major_Numerical_Errors = 3, 
-          Minor_Numerical_Errors = 5)
+          Major_Numerical_Errors = 0, 
+          Minor_Numerical_Errors = 6)
 ```
 
-Despite having very little descriptive metadata along with the datasets, most of the results were able to be reproduced with only minor rounding variation. 
+Despite having very little descriptive metadata along with the datasets, all of the results were able to be reproduced with only minor rounding variation. 
 
-With the updated syntax from the author, I replicated the direction of all the mixed model tests. Many of the major numerical errors can frome this test - it's hard to tell whether they are due to differences in SPSS version or are actually major numerical reporting errors. 
+With the updated syntax from the author, I also replicated the mixed linear model analysis and the preprocessing of dataset2 they did to run it. 
 
 
 ```{r session_info, include=TRUE, echo=TRUE, results='markup'}
